@@ -569,6 +569,7 @@ function addStep(type){
   selId=flow[flow.length-1].id;
   renderCfg();
   syncBtn();
+  if(window.innerWidth<=768) mobShow('canvas');
 }
 
 // ─── RENDER FLOW ─────────────────────────────────────────────
@@ -632,7 +633,13 @@ function getMeta(s){
 // ─── STEP MANAGEMENT ─────────────────────────────────────────
 function rm(id){flow=flow.filter(s=>s.id!==id);if(selId===id){selId=null;renderCfg()}renderFlow()}
 function mv(id,dir){const i=flow.findIndex(s=>s.id===id),ni=i+dir;if(ni<0||ni>=flow.length)return;[flow[i],flow[ni]]=[flow[ni],flow[i]];renderFlow()}
-function selectStep(id){selId=id;renderFlow();renderCfg();switchTab('config')}
+function selectStep(id){
+  selId=id;
+  renderFlow();
+  renderCfg();
+  switchTab('config');
+  if(window.innerWidth<=768) mobShow('panel');
+}
 
 // ─── CONFIG PANEL ─────────────────────────────────────────────
 function renderCfg(){
@@ -993,12 +1000,7 @@ document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.f
 document.getElementById('saveModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
 document.getElementById('loadModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
 
-// Jump to canvas after adding step on mobile
-const _addStepOrig = addStep;
-function addStep(type){ _addStepOrig(type); if(window.innerWidth<=768) mobShow('canvas'); }
-// Jump to panel after selecting step on mobile
-const _selectStepOrig = selectStep;
-function selectStep(id){ _selectStepOrig(id); if(window.innerWidth<=768) mobShow('panel'); }
+// mobile navigation handled inline in addStep and selectStep
 </script>
 </body>
 </html>
