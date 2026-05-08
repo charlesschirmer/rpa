@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RPA Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14;--bg2:#13151c;--bg3:#1a1d27;--bg4:#22263a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf2;--muted:#6b7080;
+  --accent:#4f8ef7;--accent2:#7c5fe6;
+  --green:#3ecf8e;--red:#f66;--amber:#f5a623;--cyan:#4ecdc4;--pink:#e85d9a;
+  --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:10px;--rl:16px;
+}
+/* ── LIGHT THEME (SAP Fiori) ─────────────────────────────── */
+body.light {
+  --bg:#f5f6f7;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e5e8ec;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#32363a;--muted:#89919a;
+  --accent:#0a6ed1;--accent2:#6a2ca0;
+  --green:#107e3e;--red:#bb0000;--amber:#e9730c;--cyan:#0070f2;--pink:#aa0808;
+}
+body.light .c-http{background:rgba(10,110,209,.1);color:#0a6ed1}
+body.light .c-transform{background:rgba(106,44,160,.1);color:#6a2ca0}
+body.light .c-condition{background:rgba(233,115,12,.1);color:#c14600}
+body.light .c-log{background:rgba(16,126,62,.1);color:#107e3e}
+body.light .c-delay{background:rgba(0,112,242,.1);color:#0070f2}
+body.light .c-set{background:rgba(170,8,8,.08);color:#aa0808}
+body.light .c-loop{background:rgba(187,0,0,.1);color:#bb0000}
+body.light .run-btn{background:linear-gradient(135deg,#0a6ed1,#6a2ca0)}
+body.light .logo-icon{background:linear-gradient(135deg,#0a6ed1,#6a2ca0)}
+body.light .pb{background:linear-gradient(90deg,#0a6ed1,#6a2ca0)}
+body.light .badge{background:rgba(16,126,62,.1);color:#107e3e;border-color:rgba(16,126,62,.3)}
+body.light .badge.run{background:rgba(10,110,209,.1);color:#0a6ed1;border-color:rgba(10,110,209,.3)}
+body.light .badge.err{background:rgba(187,0,0,.1);color:#bb0000;border-color:rgba(187,0,0,.3)}
+body.light .rpreview{color:#107e3e}
+body.light .sc.sdone{border-color:rgba(16,126,62,.5)}
+body.light .sc.serr{border-color:rgba(187,0,0,.5)}
+body.light header{box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+body.light .sidebar{box-shadow:2px 0 6px rgba(0,0,0,0.04)}
+body.light .rp{box-shadow:-2px 0 6px rgba(0,0,0,0.04)}
+/* theme toggle button */
+.theme-btn{
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--border2);
+  background:var(--bg3);
+  cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;flex-shrink:0;
+}
+.theme-btn:hover{background:var(--bg4);transform:rotate(20deg)}
+/* save/load buttons */
+.io-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 13px;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r);
+  color:var(--text);
+  font-family:var(--font);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .18s;white-space:nowrap;
+}
+.io-btn:hover{background:var(--bg4);border-color:var(--accent);color:var(--accent)}
+.io-sep{width:1px;height:20px;background:var(--border2);flex-shrink:0}
+/* modal */
+.mo{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.65);
+  z-index:300;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(3px);
+}
+.mo.open{display:flex}
+.mbox{
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--rl);
+  padding:24px;width:460px;max-width:95vw;
+  animation:moin .18s ease;
+}
+@keyframes moin{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.mtitle{font-size:15px;font-weight:800;margin-bottom:4px}
+.msub{font-size:11px;color:var(--muted);margin-bottom:18px}
+.mlist{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;margin-bottom:16px}
+.mitem{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);cursor:pointer;transition:all .15s;
+}
+.mitem:hover{border-color:var(--accent);background:var(--bg4)}
+.mitem-icon{font-size:20px;flex-shrink:0}
+.mitem-info{flex:1;min-width:0}
+.mitem-name{font-size:13px;font-weight:700;margin-bottom:1px}
+.mitem-meta{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.mitem-del{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.mitem-del:hover{background:rgba(255,102,102,.15);color:var(--red);border-color:rgba(255,102,102,.3)}
+.mfooter{display:flex;justify-content:flex-end;gap:8px}
+.mbtn{padding:8px 16px;border-radius:var(--r);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.mbtn.cancel{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.mbtn.cancel:hover{color:var(--text)}
+.mbtn.prim{background:var(--accent);border:none;color:#fff}
+.mbtn.prim:hover{opacity:.9}
+.minput{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:13px;padding:9px 12px;outline:none;margin-bottom:14px;transition:border-color .15s}
+.minput:focus{border-color:var(--accent)}
+.mempty{text-align:center;padding:28px 0;color:var(--muted);font-size:12px;font-family:var(--mono)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.hactions{display:flex;gap:8px;align-items:center}
+.badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+.badge.run{background:rgba(79,142,247,.15);color:var(--accent);border-color:rgba(79,142,247,.3);animation:pulse 1.5s infinite}
+.badge.err{background:rgba(255,102,102,.12);color:var(--red);border-color:rgba(255,102,102,.25)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.app{display:grid;grid-template-columns:290px 1fr 350px;height:calc(100vh - 56px)}
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sh{padding:14px 18px 10px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
+.palette{padding:12px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1}
+.pi{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;user-select:none}
+.pi:hover{background:var(--bg4);border-color:var(--border2);transform:translateX(3px)}
+.picon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.pinfo{flex:1;min-width:0}
+.pname{font-size:12px;font-weight:700;margin-bottom:1px}
+.pdesc{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* CANVAS */
+.canvas{background:var(--bg);overflow-y:auto;padding:20px;position:relative}
+.ctoolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl)}
+.ctitle{font-size:13px;font-weight:700;flex:1}
+.ccount{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cempty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 160px);gap:10px;opacity:.5}
+.cempty-icon{font-size:44px}
+.cempty-text{font-size:13px;color:var(--muted);text-align:center;line-height:1.6}
+.demo-btn{margin-top:14px;padding:10px 22px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;opacity:1}
+.demo-btn:hover{background:var(--bg4);border-color:var(--accent);color:var(--accent)}
+.flow-list{display:flex;flex-direction:column}
+/* STEP */
+.sc{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;cursor:pointer;transition:all .15s}
+.sc:hover{border-color:var(--border2);background:var(--bg3)}
+.sc.sel{border-color:var(--accent);box-shadow:0 0 0 1px rgba(79,142,247,.25)}
+.sc.srun{border-color:var(--accent);animation:sp 1s infinite}
+.sc.sdone{border-color:rgba(62,207,142,.4)}
+.sc.serr{border-color:rgba(255,102,102,.4)}
+@keyframes sp{0%,100%{box-shadow:0 0 0 1px rgba(79,142,247,.2)}50%{box-shadow:0 0 0 5px rgba(79,142,247,.08)}}
+.sh2{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.snum{width:20px;height:20px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--muted);flex-shrink:0;font-family:var(--mono)}
+.sicon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.sname{font-size:13px;font-weight:700;flex:1}
+.sstatus{font-size:14px}
+.smeta{font-size:10px;color:var(--muted);font-family:var(--mono);padding-left:64px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbtns{position:absolute;right:10px;bottom:10px;display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.sc:hover .sbtns{opacity:1}
+.sbtn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .12s}
+.sbtn:hover{background:var(--bg4);color:var(--text)}
+.sbtn.del:hover{background:rgba(255,102,102,.15);color:var(--red);border-color:rgba(255,102,102,.3)}
+.conn{display:flex;align-items:center;justify-content:center;height:24px;position:relative}
+.conn::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border2);transform:translateX(-50%)}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--border2);z-index:1}
+.conn.active::before{background:var(--accent);opacity:.5}
+.conn.active .cdot{background:var(--accent)}
+/* BUTTONS */
+.run-btn{display:flex;align-items:center;gap:7px;padding:8px 16px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--r);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 14px rgba(79,142,247,.3)}
+.run-btn:disabled{opacity:.45;cursor:not-allowed}
+.stop-btn{padding:8px 14px;background:rgba(255,102,102,.1);border:1px solid rgba(255,102,102,.3);border-radius:var(--r);color:var(--red);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
+.clr-btn{padding:8px 12px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.clr-btn:hover{color:var(--text);background:var(--bg3)}
+/* RIGHT PANEL */
+.rp{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:12px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+.tab.act{color:var(--accent);border-bottom-color:var(--accent)}
+.pc{flex:1;overflow-y:auto;padding:14px;display:none}
+.pc.act{display:block}
+/* FORMS */
+.fg{margin-bottom:12px}
+.fl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;display:block}
+.fi,.fs,.ft{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 11px;outline:none;transition:border-color .15s}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--accent)}
+.ft{resize:vertical;min-height:72px}
+.fs option{background:var(--bg3)}
+.save-btn{width:100%;padding:9px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px}
+.save-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+/* LOG */
+.lc{display:flex;flex-direction:column;gap:3px}
+.le{display:flex;gap:7px;padding:6px 9px;border-radius:6px;font-family:var(--mono);font-size:10px;line-height:1.5;background:var(--bg3);border-left:2px solid transparent;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.le.info{border-left-color:var(--accent)}
+.le.success{border-left-color:var(--green)}
+.le.error{border-left-color:var(--red)}
+.le.warn{border-left-color:var(--amber)}
+.lt{color:var(--muted);flex-shrink:0}
+.lm{color:var(--text);word-break:break-all}
+.le-empty{text-align:center;color:var(--muted);font-size:11px;padding:24px 0;font-family:var(--mono)}
+/* STATS */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.scard{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:11px;text-align:center}
+.sval{font-size:20px;font-weight:800;font-family:var(--mono);margin-bottom:2px}
+.slbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.pbwrap{background:var(--bg3);border-radius:4px;height:4px;overflow:hidden;margin:6px 0 14px}
+.pb{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s ease;width:0%}
+/* COLORS */
+.c-http{background:rgba(79,142,247,.15);color:var(--accent)}
+.c-transform{background:rgba(124,95,230,.15);color:var(--accent2)}
+.c-condition{background:rgba(245,166,35,.15);color:var(--amber)}
+.c-log{background:rgba(62,207,142,.15);color:var(--green)}
+.c-delay{background:rgba(78,205,196,.15);color:var(--cyan)}
+.c-set{background:rgba(232,93,154,.15);color:var(--pink)}
+.c-loop{background:rgba(255,102,102,.15);color:var(--red)}
+/* RESULT */
+.rpreview{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;font-family:var(--mono);font-size:10px;color:var(--green);max-height:110px;overflow-y:auto;word-break:break-all;white-space:pre-wrap;margin-top:6px}
+.cempty2{text-align:center;padding:36px 16px;color:var(--muted);font-size:12px;line-height:1.7}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-icon">⚡</div>RPA Engine</div>
+  <div class="hactions">
+    <button class="theme-btn" id="themeBtn" title="Alternar tema">🌙</button>
+    <div class="io-sep"></div>
+    <button class="io-btn" id="saveBtn">💾 Salvar</button>
+    <button class="io-btn" id="loadBtn">📂 Carregar</button>
+    <div class="io-sep"></div>
+    <span class="badge" id="gStatus">● Pronto</span>
+    <button class="clr-btn" id="clrBtn">🗑 Limpar</button>
+    <button class="stop-btn" id="stopBtn" style="display:none">⏹ Parar</button>
+    <button class="run-btn" id="runBtn">▶ Executar</button>
+  </div>
+</header>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sh"><span>Ações Disponíveis</span></div>
+    <div class="palette" id="palette"></div>
+  </div>
+
+  <div class="canvas" id="canvas">
+    <div class="ctoolbar" id="toolbar" style="display:none">
+      <span class="ctitle">🔄 Fluxo de Automação</span>
+      <span class="ccount" id="stepCount">0 passos</span>
+    </div>
+    <div class="flow-list" id="flowList"></div>
+    <div class="cempty" id="emptyState">
+      <div class="cempty-icon">🤖</div>
+      <div class="cempty-text">Seu fluxo está vazio.<br>Clique nas ações ao lado para adicionar passos.</div>
+      <button class="demo-btn" id="demoBtn">⚡ Carregar Fluxo Demo</button>
+    </div>
+  </div>
+
+  <div class="rp">
+    <div class="tabs">
+      <div class="tab act" id="tab-config" onclick="switchTab('config')">⚙️ Config</div>
+      <div class="tab" id="tab-log" onclick="switchTab('log')">📋 Log</div>
+      <div class="tab" id="tab-stats" onclick="switchTab('stats')">📊 Stats</div>
+    </div>
+    <div class="pc act" id="pc-config">
+      <div class="cempty2" id="cfgEmpty">👆<br>Selecione um passo para editar.</div>
+      <div id="cfgForm" style="display:none"></div>
+    </div>
+    <div class="pc" id="pc-log">
+      <div class="lc" id="logC"><div class="le-empty">Nenhum log. Execute a automação.</div></div>
+    </div>
+    <div class="pc" id="pc-stats">
+      <div class="sgrid">
+        <div class="scard"><div class="sval" id="stTotal" style="color:var(--text)">0</div><div class="slbl">Total</div></div>
+        <div class="scard"><div class="sval" id="stOk" style="color:var(--green)">0</div><div class="slbl">Sucesso</div></div>
+        <div class="scard"><div class="sval" id="stFail" style="color:var(--red)">0</div><div class="slbl">Falhas</div></div>
+        <div class="scard"><div class="sval" id="stTime" style="color:var(--accent)">—</div><div class="slbl">Tempo</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Progresso</div>
+      <div class="pbwrap"><div class="pb" id="pb"></div></div>
+      <div id="stDetail" style="font-size:11px;color:var(--muted);font-family:var(--mono)">Execute para ver estatísticas.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE MODAL -->
+<div class="mo" id="saveModal">
+  <div class="mbox">
+    <div class="mtitle">💾 Salvar Fluxo</div>
+    <div class="msub">Dê um nome para identificar esta automação.</div>
+    <input class="minput" id="saveNameInput" placeholder="Ex: Consulta CEP, Relatório Diário..." maxlength="60">
+    <div class="mfooter">
+      <button class="mbtn cancel" id="saveCancelBtn">Cancelar</button>
+      <button class="mbtn prim" id="saveConfirmBtn">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOAD MODAL -->
+<div class="mo" id="loadModal">
+  <div class="mbox">
+    <div class="mtitle">📂 Carregar Fluxo</div>
+    <div class="msub">Escolha um fluxo salvo ou importe um arquivo .json.</div>
+    <div class="mlist" id="loadList"></div>
+    <div class="mfooter">
+      <button class="mbtn cancel" id="exportFileBtn" style="display:flex;gap:6px;align-items:center">📤 Exportar .json</button>
+      <button class="mbtn cancel" id="importFileBtn" style="display:flex;gap:6px;align-items:center">📥 Importar .json</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+      <button class="mbtn cancel" id="loadCancelBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── ACTION TYPES ────────────────────────────────────────────
+const TYPES = [
+  {
+    type:'http', name:'HTTP Request', icon:'🌐', cls:'c-http', desc:'Chama uma API ou URL',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Buscar dados'},
+      {k:'method',l:'Método',t:'select',o:['GET','POST','PUT','PATCH','DELETE']},
+      {k:'url',l:'URL',t:'text',p:'https://api.exemplo.com/dados'},
+      {k:'body',l:'Body JSON',t:'textarea',p:'{"chave":"valor"}'},
+      {k:'outputVar',l:'Salvar em variável',t:'text',p:'response'},
+    ],
+    def:{label:'HTTP Request',method:'GET',url:'https://jsonplaceholder.typicode.com/users/1',body:'',outputVar:'response'},
+    async run(c,ctx){
+      const opts={method:c.method,headers:{'Content-Type':'application/json'}};
+      if(c.body&&['POST','PUT','PATCH'].includes(c.method)) opts.body=tpl(c.body,ctx.v);
+      const url=tpl(c.url,ctx.v);
+      ctx.log('info',`→ ${c.method} ${url}`);
+      const r=await fetch(url,opts);
+      const d=await r.json();
+      if(c.outputVar) ctx.v[c.outputVar]=d;
+      ctx.log('success',`✓ ${r.status} | ${JSON.stringify(d).slice(0,120)}…`);
+      return d;
+    }
+  },
+  {
+    type:'transform', name:'Transformar Dados', icon:'🔄', cls:'c-transform', desc:'Processa variáveis com JS',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Extrair nome'},
+      {k:'inputVar',l:'Variável de entrada',t:'text',p:'response'},
+      {k:'expression',l:'Expressão JS (use "data")',t:'textarea',p:'data.name.toUpperCase()'},
+      {k:'outputVar',l:'Salvar resultado em',t:'text',p:'resultado'},
+    ],
+    def:{label:'Transformar',inputVar:'response',expression:'data.name||JSON.stringify(data)',outputVar:'resultado'},
+    async run(c,ctx){
+      const data=ctx.v[c.inputVar];
+      ctx.log('info',`→ Transformando ${c.inputVar}`);
+      const fn=new Function('data','return '+c.expression);
+      const r=fn(data);
+      if(c.outputVar) ctx.v[c.outputVar]=r;
+      ctx.log('success',`✓ ${JSON.stringify(r).slice(0,150)}`);
+      return r;
+    }
+  },
+  {
+    type:'condition', name:'Condição (If)', icon:'🔀', cls:'c-condition', desc:'Verifica condição e ramifica',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Checar status'},
+      {k:'condition',l:'Condição JS (use "vars")',t:'textarea',p:'vars.response&&vars.response.id>0'},
+      {k:'onTrue',l:'Log se verdadeiro',t:'text',p:'Condição atendida!'},
+      {k:'onFalse',l:'Log se falso',t:'text',p:'Condição não atendida.'},
+    ],
+    def:{label:'Condição',condition:'vars.response&&vars.response.id>0',onTrue:'Dados válidos!',onFalse:'Dados inválidos.'},
+    async run(c,ctx){
+      ctx.log('info',`→ Avaliando condição`);
+      const fn=new Function('vars','return !!('+c.condition+')');
+      const r=fn(ctx.v);
+      ctx.log(r?'success':'warn',r?`✓ VERDADEIRO → ${c.onTrue}`:`⚠ FALSO → ${c.onFalse}`);
+      return r;
+    }
+  },
+  {
+    type:'set', name:'Definir Variável', icon:'📌', cls:'c-set', desc:'Cria ou atualiza variáveis',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Setar token'},
+      {k:'varName',l:'Nome da variável',t:'text',p:'meuToken'},
+      {k:'varValue',l:'Valor (use {{var}})',t:'textarea',p:'Olá {{nome}}!'},
+    ],
+    def:{label:'Definir Variável',varName:'mensagem',varValue:'Valor aqui'},
+    async run(c,ctx){
+      const v=tpl(c.varValue,ctx.v);
+      ctx.v[c.varName]=v;
+      ctx.log('success',`✓ ${c.varName} = ${JSON.stringify(v).slice(0,100)}`);
+      return v;
+    }
+  },
+  {
+    type:'log', name:'Log / Mensagem', icon:'📝', cls:'c-log', desc:'Registra mensagem no log',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Log status'},
+      {k:'message',l:'Mensagem (use {{var}})',t:'textarea',p:'Processando: {{nome}}'},
+      {k:'level',l:'Nível',t:'select',o:['info','success','warn','error']},
+    ],
+    def:{label:'Log',message:'Mensagem de log',level:'info'},
+    async run(c,ctx){
+      const m=tpl(c.message,ctx.v);
+      ctx.log(c.level,m);
+      return m;
+    }
+  },
+  {
+    type:'delay', name:'Aguardar (Delay)', icon:'⏱️', cls:'c-delay', desc:'Pausa por N milissegundos',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Aguardar resposta'},
+      {k:'ms',l:'Tempo (ms)',t:'text',p:'1000'},
+    ],
+    def:{label:'Aguardar',ms:'1000'},
+    async run(c,ctx){
+      const ms=parseInt(c.ms)||1000;
+      ctx.log('info',`→ Aguardando ${ms}ms…`);
+      await sleep(ms);
+      ctx.log('success',`✓ ${ms}ms concluídos`);
+    }
+  },
+  {
+    type:'loop', name:'Loop / Repetição', icon:'🔁', cls:'c-loop', desc:'Repete N vezes com índice',
+    fields:[
+      {k:'label',l:'Nome',t:'text',p:'Ex: Loop 3x'},
+      {k:'times',l:'Repetições',t:'text',p:'3'},
+      {k:'indexVar',l:'Variável do índice',t:'text',p:'i'},
+      {k:'delayMs',l:'Delay entre iterações (ms)',t:'text',p:'300'},
+    ],
+    def:{label:'Loop',times:'3',indexVar:'i',delayMs:'300'},
+    async run(c,ctx){
+      const n=parseInt(c.times)||3;
+      const d=parseInt(c.delayMs)||0;
+      ctx.log('info',`→ Loop: ${n} iterações`);
+      for(let i=0;i<n;i++){
+        ctx.v[c.indexVar]=i;
+        ctx.log('info',`  iteração ${i+1}/${n}`);
+        if(d>0) await sleep(d);
+      }
+      ctx.log('success',`✓ Loop ${n}x concluído`);
+    }
+  },
+];
+
+// ─── STATE ───────────────────────────────────────────────────
+let flow=[], selId=null, running=false, stopReq=false;
+let stats={ok:0,fail:0,t0:null};
+
+// ─── UTILS ───────────────────────────────────────────────────
+function tpl(s,v){return typeof s==='string'?s.replace(/\{\{(\w+)\}\}/g,(_,k)=>v[k]!==undefined?v[k]:`{{${k}}}`):s}
+function uid(){return 's'+Date.now()+Math.random().toString(36).slice(2,5)}
+function def(type){return TYPES.find(t=>t.type===type)}
+function ts(){const d=new Date();return[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>n.toString().padStart(2,'0')).join(':')}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ─── SYNC RUN BUTTON ─────────────────────────────────────────
+function syncBtn(){
+  const btn=document.getElementById('runBtn');
+  btn.disabled = (flow.length===0 || running);
+}
+
+// ─── LOG ─────────────────────────────────────────────────────
+const icons={info:'🔵',success:'✅',warn:'⚠️',error:'❌'};
+function log(level,msg){
+  const c=document.getElementById('logC');
+  const emp=c.querySelector('.le-empty');
+  if(emp) emp.remove();
+  const d=document.createElement('div');
+  d.className=`le ${level}`;
+  d.innerHTML=`<span class="lt">${ts()}</span><span>${icons[level]||'🔵'}</span><span class="lm">${msg}</span>`;
+  c.appendChild(d);
+  c.scrollTop=c.scrollHeight;
+}
+function clearLog(){document.getElementById('logC').innerHTML='<div class="le-empty">Nenhum log. Execute a automação.</div>'}
+
+// ─── PALETTE ─────────────────────────────────────────────────
+function renderPalette(){
+  document.getElementById('palette').innerHTML=TYPES.map(a=>`
+    <div class="pi" onclick="addStep('${a.type}')">
+      <div class="picon ${a.cls}">${a.icon}</div>
+      <div class="pinfo"><div class="pname">${a.name}</div><div class="pdesc">${a.desc}</div></div>
+    </div>`).join('');
+}
+
+// ─── ADD STEP ────────────────────────────────────────────────
+function addStep(type){
+  const d=def(type);
+  flow.push({id:uid(),type,config:{...d.def},status:'idle',result:null});
+  renderFlow();
+  selId=flow[flow.length-1].id;
+  renderCfg();
+  syncBtn();
+}
+
+// ─── RENDER FLOW ─────────────────────────────────────────────
+function renderFlow(){
+  const list=document.getElementById('flowList');
+  const empty=document.getElementById('emptyState');
+  const toolbar=document.getElementById('toolbar');
+
+  if(flow.length===0){
+    empty.style.display='flex';
+    toolbar.style.display='none';
+    list.innerHTML='';
+    syncBtn();
+    return;
+  }
+  empty.style.display='none';
+  toolbar.style.display='flex';
+  document.getElementById('stepCount').textContent=`${flow.length} passo${flow.length!==1?'s':''}`;
+
+  list.innerHTML=flow.map((s,i)=>{
+    const d=def(s.type);
+    const si=s.status==='done'?'✅':s.status==='error'?'❌':s.status==='running'?'⟳':'○';
+    const sc=s.status==='running'?'srun':s.status==='done'?'sdone':s.status==='error'?'serr':'';
+    const sel=selId===s.id?'sel':'';
+    const meta=getMeta(s);
+    const ca=s.status==='done'&&i<flow.length-1?'active':'';
+    return `
+      <div class="sc ${sc} ${sel}" id="c_${s.id}" onclick="selectStep('${s.id}')">
+        <div class="sh2">
+          <div class="snum">${i+1}</div>
+          <div class="sicon ${d.cls}">${d.icon}</div>
+          <div class="sname">${s.config.label||d.name}</div>
+          <div class="sstatus">${si}</div>
+        </div>
+        ${meta?`<div class="smeta">${meta}</div>`:''}
+        <div class="sbtns">
+          <button class="sbtn" onclick="event.stopPropagation();mv('${s.id}',-1)" title="↑">↑</button>
+          <button class="sbtn" onclick="event.stopPropagation();mv('${s.id}',1)" title="↓">↓</button>
+          <button class="sbtn del" onclick="event.stopPropagation();rm('${s.id}')" title="✕">✕</button>
+        </div>
+      </div>
+      ${i<flow.length-1?`<div class="conn ${ca}"><div class="cdot"></div></div>`:''}`;
+  }).join('');
+
+  syncBtn();
+  updateStats();
+}
+
+function getMeta(s){
+  const c=s.config,t=s.type;
+  if(t==='http') return `${c.method} ${(c.url||'').slice(0,50)}`;
+  if(t==='transform') return `${c.inputVar} → ${c.outputVar}`;
+  if(t==='condition') return (c.condition||'').slice(0,60);
+  if(t==='set') return `${c.varName} = ${(c.varValue||'').slice(0,40)}`;
+  if(t==='delay') return `${c.ms}ms`;
+  if(t==='loop') return `${c.times}× | idx: ${c.indexVar}`;
+  if(t==='log') return (c.message||'').slice(0,60);
+  return '';
+}
+
+// ─── STEP MANAGEMENT ─────────────────────────────────────────
+function rm(id){flow=flow.filter(s=>s.id!==id);if(selId===id){selId=null;renderCfg()}renderFlow()}
+function mv(id,dir){const i=flow.findIndex(s=>s.id===id),ni=i+dir;if(ni<0||ni>=flow.length)return;[flow[i],flow[ni]]=[flow[ni],flow[i]];renderFlow()}
+function selectStep(id){selId=id;renderFlow();renderCfg();switchTab('config')}
+
+// ─── CONFIG PANEL ─────────────────────────────────────────────
+function renderCfg(){
+  const emp=document.getElementById('cfgEmpty');
+  const form=document.getElementById('cfgForm');
+  if(!selId){emp.style.display='block';form.style.display='none';return}
+  const s=flow.find(x=>x.id===selId);
+  if(!s){emp.style.display='block';form.style.display='none';return}
+  const d=def(s.type);
+  emp.style.display='none';
+  form.style.display='block';
+  form.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)">
+      <div class="sicon ${d.cls}" style="width:30px;height:30px;font-size:15px">${d.icon}</div>
+      <div><div style="font-size:13px;font-weight:700">${d.name}</div><div style="font-size:10px;color:var(--muted)">${d.desc}</div></div>
+    </div>
+    ${d.fields.map(f=>fld(f,s.config[f.k]||'')).join('')}
+    ${s.result!==null?`<div style="font-size:10px;color:var(--muted);margin-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">Último resultado</div><div class="rpreview">${JSON.stringify(s.result,null,2).slice(0,400)}</div>`:''}
+    <button class="save-btn" onclick="saveCfg('${s.id}')">💾 Salvar configuração</button>`;
+}
+
+function fld(f,val){
+  if(f.t==='textarea') return `<div class="fg"><label class="fl">${f.l}</label><textarea class="ft" id="f_${f.k}" placeholder="${f.p||''}">${val}</textarea></div>`;
+  if(f.t==='select'){const opts=(f.o||[]).map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('');return `<div class="fg"><label class="fl">${f.l}</label><select class="fs" id="f_${f.k}">${opts}</select></div>`}
+  return `<div class="fg"><label class="fl">${f.l}</label><input type="text" class="fi" id="f_${f.k}" value="${val}" placeholder="${f.p||''}"></div>`;
+}
+
+function saveCfg(id){
+  const s=flow.find(x=>x.id===id);if(!s)return;
+  def(s.type).fields.forEach(f=>{const el=document.getElementById('f_'+f.k);if(el)s.config[f.k]=el.value});
+  renderFlow();
+  log('info',`✏️ Config salva: "${s.config.label}"`);
+}
+
+// ─── TABS ────────────────────────────────────────────────────
+function switchTab(name){
+  ['config','log','stats'].forEach(n=>{
+    document.getElementById('tab-'+n).classList.toggle('act',n===name);
+    document.getElementById('pc-'+n).classList.toggle('act',n===name);
+  });
+}
+
+// ─── RUN ─────────────────────────────────────────────────────
+async function runAutomation(){
+  if(running||flow.length===0) return;
+  running=true; stopReq=false;
+  clearLog();
+  flow.forEach(s=>{s.status='idle';s.result=null});
+  stats={ok:0,fail:0,t0:Date.now()};
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('stopBtn').style.display='flex';
+  setStatus('run','● Executando…');
+  switchTab('log');
+  log('info',`🚀 Automação iniciada — ${flow.length} passo(s)`);
+
+  const ctx={v:{},log};
+
+  for(let i=0;i<flow.length;i++){
+    if(stopReq){log('warn','⏹ Parado pelo usuário');break}
+    const s=flow[i];
+    const d=def(s.type);
+    s.status='running';
+    renderFlow();
+    prog(i,flow.length);
+    log('info',`\n▶ [${i+1}/${flow.length}] ${s.config.label||d.name}`);
+    try{
+      const r=await d.run(s.config,ctx);
+      s.result=r!==undefined?r:null;
+      s.status='done';
+      stats.ok++;
+    }catch(e){
+      s.status='error';
+      s.result={error:e.message};
+      stats.fail++;
+      log('error',`✗ Erro: ${e.message}`);
+    }
+    renderFlow();
+    if(selId===s.id) renderCfg();
+    prog(i+1,flow.length);
+  }
+
+  const el=((Date.now()-stats.t0)/1000).toFixed(2);
+  log(stats.fail>0?'warn':'success',`\n🏁 Concluído em ${el}s — ✅ ${stats.ok} OK, ❌ ${stats.fail} erro(s)`);
+  document.getElementById('stTime').textContent=`${el}s`;
+  setStatus(stats.fail>0?'err':'','●'+(stats.fail>0?' Erros':' Concluído'));
+  running=false;
+  document.getElementById('runBtn').disabled=false;
+  document.getElementById('stopBtn').style.display='none';
+  updateStats();
+  prog(flow.length,flow.length);
+  switchTab('stats');
+}
+
+function stopAutomation(){stopReq=true}
+function prog(done,total){document.getElementById('pb').style.width=total>0?Math.round(done/total*100)+'%':'0%'}
+
+function updateStats(){
+  document.getElementById('stTotal').textContent=flow.length;
+  document.getElementById('stOk').textContent=flow.filter(s=>s.status==='done').length;
+  document.getElementById('stFail').textContent=flow.filter(s=>s.status==='error').length;
+  const det=document.getElementById('stDetail');
+  if(!running&&flow.length>0){
+    det.innerHTML=flow.map((s,i)=>{
+      const ic=s.status==='done'?'✅':s.status==='error'?'❌':'⚪';
+      return `<div style="padding:3px 0;border-bottom:1px solid var(--border)">${ic} ${i+1}. ${s.config.label||s.type}</div>`;
+    }).join('');
+  }
+}
+
+function setStatus(cls,msg){
+  const el=document.getElementById('gStatus');
+  el.textContent=msg; el.className='badge';
+  if(cls) el.classList.add(cls);
+}
+
+// ─── CLEAR ───────────────────────────────────────────────────
+function clearAll(){
+  if(running) return;
+  flow=[];selId=null;stats={ok:0,fail:0,t0:null};
+  clearLog();renderFlow();renderCfg();
+  setStatus('','● Pronto');prog(0,1);
+  document.getElementById('stTotal').textContent='0';
+  document.getElementById('stOk').textContent='0';
+  document.getElementById('stFail').textContent='0';
+  document.getElementById('stTime').textContent='—';
+  document.getElementById('stDetail').textContent='Execute para ver estatísticas.';
+}
+
+// ─── DEMO ────────────────────────────────────────────────────
+function loadDemo(){
+  if(running) return;
+  // reset direto sem passar por clearAll (evita renderFlow com flow vazio)
+  flow=[];selId=null;stats={ok:0,fail:0,t0:null};
+  clearLog();setStatus('','● Pronto');prog(0,1);
+  ['stTotal','stOk','stFail'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('stTime').textContent='—';
+  document.getElementById('stDetail').textContent='Execute para ver estatísticas.';
+
+  [
+    {type:'log',   config:{label:'Início',          message:'🚀 Iniciando coleta de dados',level:'info'}},
+    {type:'set',   config:{label:'Setar UserId',     varName:'userId',varValue:'1'}},
+    {type:'http',  config:{label:'Buscar Usuário',   method:'GET',url:'https://jsonplaceholder.typicode.com/users/{{userId}}',body:'',outputVar:'userData'}},
+    {type:'transform',config:{label:'Extrair Nome', inputVar:'userData',expression:'(data.name||"N/A").toUpperCase()',outputVar:'nomeFormatado'}},
+    {type:'condition',config:{label:'Verificar Dados',condition:'vars.userData&&vars.userData.id>0',onTrue:'Dados válidos!',onFalse:'Dados inválidos!'}},
+    {type:'delay', config:{label:'Aguardar 800ms',  ms:'800'}},
+    {type:'http',  config:{label:'Buscar Posts',     method:'GET',url:'https://jsonplaceholder.typicode.com/users/1/posts',body:'',outputVar:'posts'}},
+    {type:'transform',config:{label:'Contar Posts', inputVar:'posts',expression:'Array.isArray(data)?data.length:0',outputVar:'totalPosts'}},
+    {type:'log',   config:{label:'Relatório Final',  message:'👤 {{nomeFormatado}} | 📄 {{totalPosts}} posts',level:'success'}},
+  ].forEach(s=>{
+    const d=def(s.type);
+    flow.push({id:uid(),type:s.type,config:{...d.def,...s.config},status:'idle',result:null});
+  });
+
+  renderFlow();   // renderiza com flow já preenchido
+  renderCfg();
+  // syncBtn é chamado dentro do renderFlow, mas chamamos de novo por segurança
+  syncBtn();
+  log('info','📂 Fluxo demo carregado! Clique em ▶ Executar.');
+  switchTab('log');
+}
+
+// ─── SAVE / LOAD ─────────────────────────────────────────────
+const STORAGE_KEY = 'rpa_flows';
+
+function getFlows(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]} }
+function setFlows(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)) }
+
+// ── SAVE ──
+function openSaveModal(){
+  if(flow.length===0){log('warn','⚠ Nenhum passo para salvar.');switchTab('log');return}
+  const input=document.getElementById('saveNameInput');
+  input.value='';
+  document.getElementById('saveModal').classList.add('open');
+  setTimeout(()=>input.focus(),80);
+}
+
+function confirmSave(){
+  const name=document.getElementById('saveNameInput').value.trim();
+  if(!name){document.getElementById('saveNameInput').style.borderColor='var(--red)';return}
+  const flows=getFlows();
+  const existing=flows.findIndex(f=>f.name===name);
+  const entry={
+    name,
+    savedAt: new Date().toISOString(),
+    stepCount: flow.length,
+    steps: flow.map(s=>({type:s.type,config:{...s.config}}))
+  };
+  if(existing>=0) flows[existing]=entry; else flows.unshift(entry);
+  setFlows(flows);
+  document.getElementById('saveModal').classList.remove('open');
+  log('success',`💾 Fluxo "${name}" salvo! (${flow.length} passo(s))`);
+  switchTab('log');
+}
+
+// ── LOAD ──
+function openLoadModal(){
+  renderLoadList();
+  document.getElementById('loadModal').classList.add('open');
+}
+
+function renderLoadList(){
+  const flows=getFlows();
+  const list=document.getElementById('loadList');
+  if(flows.length===0){
+    list.innerHTML='<div class="mempty">Nenhum fluxo salvo ainda.<br>Salve um fluxo primeiro ou importe um arquivo .json.</div>';
+    return;
+  }
+  list.innerHTML=flows.map((f,i)=>{
+    const dt=new Date(f.savedAt);
+    const dtStr=dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="mitem" onclick="loadFlowByIndex(${i})">
+      <div class="mitem-icon">🤖</div>
+      <div class="mitem-info">
+        <div class="mitem-name">${f.name}</div>
+        <div class="mitem-meta">${f.stepCount} passo(s) · salvo em ${dtStr}</div>
+      </div>
+      <button class="mitem-del" title="Excluir" onclick="event.stopPropagation();deleteFlow(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function loadFlowByIndex(i){
+  const flows=getFlows();
+  const entry=flows[i];
+  if(!entry) return;
+  importFlowData(entry);
+  document.getElementById('loadModal').classList.remove('open');
+  log('success',`📂 Fluxo "${entry.name}" carregado! (${flow.length} passo(s))`);
+  switchTab('log');
+}
+
+function deleteFlow(i){
+  const flows=getFlows();
+  const name=flows[i]?.name||'';
+  flows.splice(i,1);
+  setFlows(flows);
+  renderLoadList();
+  log('info',`🗑 Fluxo "${name}" excluído.`);
+}
+
+function importFlowData(entry){
+  if(running) return;
+  flow=[];selId=null;stats={ok:0,fail:0,t0:null};
+  clearLog();setStatus('','● Pronto');prog(0,1);
+  ['stTotal','stOk','stFail'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('stTime').textContent='—';
+  document.getElementById('stDetail').textContent='Execute para ver estatísticas.';
+  (entry.steps||[]).forEach(s=>{
+    const d=def(s.type);
+    if(!d) return;
+    flow.push({id:uid(),type:s.type,config:{...d.def,...s.config},status:'idle',result:null});
+  });
+  renderFlow();renderCfg();syncBtn();
+}
+
+// ── EXPORT FILE ──
+function exportToFile(){
+  if(flow.length===0){log('warn','⚠ Nenhum passo para exportar.');switchTab('log');return}
+  const name=prompt('Nome do fluxo para exportar:','meu-fluxo');
+  if(!name) return;
+  const data=JSON.stringify({name,savedAt:new Date().toISOString(),stepCount:flow.length,steps:flow.map(s=>({type:s.type,config:{...s.config}}))},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name.replace(/\s+/g,'-').toLowerCase()+'.json';
+  a.click();
+  log('success',`📥 Arquivo "${a.download}" exportado.`);
+}
+
+// ── IMPORT FILE ──
+function importFromFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.steps||!Array.isArray(data.steps)) throw new Error('Formato inválido');
+      importFlowData(data);
+      document.getElementById('loadModal').classList.remove('open');
+      log('success',`📂 Arquivo "${data.name||file.name}" importado! (${flow.length} passo(s))`);
+      switchTab('log');
+    }catch(err){
+      log('error',`✗ Erro ao importar: ${err.message}`);
+      switchTab('log');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─── THEME TOGGLE ────────────────────────────────────────────
+(function(){
+  const btn = document.getElementById('themeBtn');
+  const saved = localStorage.getItem('rpa_theme');
+  if(saved === 'light'){ document.body.classList.add('light'); btn.textContent = '☀️'; }
+  btn.addEventListener('click', function(){
+    const isLight = document.body.classList.toggle('light');
+    btn.textContent = isLight ? '☀️' : '🌙';
+    localStorage.setItem('rpa_theme', isLight ? 'light' : 'dark');
+  });
+})();
+
+// ─── INIT ────────────────────────────────────────────────────
+renderPalette();
+renderFlow();
+document.getElementById('runBtn').addEventListener('click', runAutomation);
+document.getElementById('stopBtn').addEventListener('click', stopAutomation);
+document.getElementById('clrBtn').addEventListener('click', clearAll);
+document.getElementById('demoBtn').addEventListener('click', loadDemo);
+document.getElementById('saveBtn').addEventListener('click', openSaveModal);
+document.getElementById('loadBtn').addEventListener('click', openLoadModal);
+document.getElementById('saveCancelBtn').addEventListener('click',()=>document.getElementById('saveModal').classList.remove('open'));
+document.getElementById('saveConfirmBtn').addEventListener('click', confirmSave);
+document.getElementById('saveNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')confirmSave()});
+document.getElementById('loadCancelBtn').addEventListener('click',()=>document.getElementById('loadModal').classList.remove('open'));
+document.getElementById('exportFileBtn').addEventListener('click', exportToFile);
+document.getElementById('importFileBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0]) importFromFile(e.target.files[0])});
+// close modals on overlay click
+document.getElementById('saveModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+document.getElementById('loadModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')});
+</script>
+</body>
+</html>
